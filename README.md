@@ -1,5 +1,5 @@
 # About
-Prototype for a automated web based therapy consulation scheduler. User can filter by location and insurance provider to easily
+Prototype for a automated web based therapy consulatation scheduler. User can filter by location and insurance provider to easily
 apply for therapy bookings.
 # Tech Stack
 * HTML
