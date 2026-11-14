@@ -69,9 +69,10 @@
           <form class="card insurance" id="insurance-panel" aria-labelledby="ins-h">
             <h2 id="ins-h">Insurance provider</h2>
             <p class="sub">Enter or select your insurance provider to help narrow matching providers.</p>
+            <p class="sub" id="insurance-demo-note">Demo feature: Insurance filtering is simulated for this prototype.</p>
             <div class="ins-grid">
               <label>Insurance
-                <input id="ins-input" list="insurers" placeholder="e.g. Aetna" autocomplete="off">
+                <input id="ins-input" list="insurers" placeholder="e.g. Aetna" autocomplete="off" aria-describedby="insurance-demo-note">
               </label>
               <label>Your location
                 <input id="loc-input" placeholder="City or state" autocomplete="off">
