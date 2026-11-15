@@ -199,7 +199,7 @@
     { id: "f5", q: "How are travel times calculated for in-person visits?",
       a: "When you enter your city or state in the Insurance & Location panel, in-person provider cards display an estimated drive time from your area." }
   ];
-
+  const INSURERS = ["Aetna", "Blue Cross Blue Shield", "Cigna", "Kaiser Permanente", "UnitedHealthcare"];
   /* =========================================================
      STATE  (insurance, location, saved providers, account info,
      and both upcoming & past visits are saved in localStorage)
@@ -208,7 +208,7 @@
 
   const state = {
     query: "", filters: new Set(), sort: "best", savedOnly: false,
-    insurance: saved.insurance !== undefined ? saved.insurance : "Blue Cross Blue Shield",
+    insurance: saved.insurance !== undefined ? saved.insurance : "",
     location: saved.location !== undefined ? saved.location : "Richardson, TX",
     saved: new Set(saved.saved || ["marcus"]),
     visits: saved.visits || [],
@@ -226,6 +226,12 @@
     editingNoteId: null,
     showLogVisitForm: false
   };
+
+  (() => {
+    const v = String(state.insurance || "").toLowerCase();
+    const hit = INSURERS.find(i => i.toLowerCase() === v);
+    state.insurance = hit || (v === "self-pay" ? "Self-pay" : "");
+  })();
 
   COMMUNITY.alias = state.account.alias || "Willow";
 
@@ -252,6 +258,14 @@
   const byId = id => PROVIDERS.find(p => p.id === id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+  function insuranceOptions(selected) {
+    const opt = (value, label) =>
+      `<option value="${esc(value)}"${value === selected ? " selected" : ""}>${esc(label)}</option>`;
+    return opt("", "Select your insurance…")
+         + INSURERS.map(i => opt(i, i)).join("")
+         + opt("Self-pay", "Self-pay (no insurance)");
+  }
 
   const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const fromIso = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
@@ -460,6 +474,7 @@
   }
 
   function initFind() {
+    $("#ins-input").innerHTML = insuranceOptions(state.insurance);
     $("#ins-input").value = state.insurance;
     $("#loc-input").value = state.location;
 
@@ -1228,7 +1243,7 @@
             <h3 class="sec-subhead">Insurance &amp; care preferences</h3>
             <div class="ins-grid">
               <label>Default insurance provider
-                <input id="acc-ins" list="insurers" value="${esc(state.insurance)}" placeholder="e.g. Aetna or Self-pay">
+                <select id="acc-ins" class="full-select">${insuranceOptions(state.insurance)}</select>
               </label>
               <label>Default location (city, state)
                 <input id="acc-loc" value="${esc(state.location)}" placeholder="e.g. Richardson, TX">
@@ -1500,7 +1515,7 @@
           state.saved = new Set(["marcus"]);
           state.res.saved = new Set(["r1"]);
           state.sup.tickets = [];
-          state.insurance = "Blue Cross Blue Shield";
+          state.insurance = "";
           state.location = "Richardson, TX";
           COMMUNITY.alias = state.account.alias;
           persist();

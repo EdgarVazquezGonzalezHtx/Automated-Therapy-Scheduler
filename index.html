@@ -72,20 +72,13 @@
             <p class="sub" id="insurance-demo-note">Demo feature: Insurance filtering is simulated for this prototype.</p>
             <div class="ins-grid">
               <label>Insurance
-                <input id="ins-input" list="insurers" placeholder="e.g. Aetna" autocomplete="off" aria-describedby="insurance-demo-note">
+                <select id="ins-input" class="full-select" aria-describedby="insurance-demo-note"></select>
               </label>
               <label>Your location
                 <input id="loc-input" placeholder="City or state" autocomplete="off">
               </label>
             </div>
-            <datalist id="insurers">
-              <option value="Aetna"></option>
-              <option value="Blue Cross Blue Shield"></option>
-              <option value="Cigna"></option>
-              <option value="Kaiser Permanente"></option>
-              <option value="UnitedHealthcare"></option>
-              <option value="Self-pay"></option>
-            </datalist>
+            
             <div class="row">
               <button class="btn primary" type="submit">Update insurance</button>
               <button class="btn" type="button" id="ins-self">I'll pay without insurance</button>
