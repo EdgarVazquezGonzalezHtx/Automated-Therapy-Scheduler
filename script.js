@@ -182,10 +182,28 @@
         "You feel heard and respected without judgment, even when talking about difficult topics.",
         "The therapist explains their approach clearly and checks in on how sessions feel for you.",
         "If it doesn't click after 1–2 visits, you can book with another provider anytime—therapists expect and support this."
+      ] },
+    { id: "r7", title: "Preparing for Couples Therapy", cat: "Couples", readTime: "4 min read",
+      summary: "How to get ready together, what the first session looks like, and how to book several sessions in a row.",
+      steps: [
+        "Each of you writes down 1–2 things you'd like to change, then share them with each other before the first session.",
+        "Therapy is a team effort. Plan for both partners to attend, and ask about an intro call to check the fit for both of you.",
+        "In sessions, take turns speaking, use 'I feel…' statements, and remember the therapist isn't there to pick a side.",
+        "Couples therapy usually works best weekly or biweekly. Use 'Book another visit' to schedule several sessions at once, and find them all under 'Your visits'.",
+        "If you ever feel unsafe with a partner, couples therapy may not be the right first step. Call the National Domestic Violence Hotline at 1-800-799-7233, or text START to 88788."
+      ] },
+    { id: "r8", title: "What to Expect in Group Therapy", cat: "Group", readTime: "4 min read",
+      summary: "How group sessions work, what privacy looks like, and how to plan a series of weekly sessions.",
+      steps: [
+        "A licensed therapist leads a small group, usually a handful to about a dozen people, around a shared goal or topic.",
+        "Groups come in different styles, such as skills groups, support groups, and open discussion groups. Ask which style fits you.",
+        "What's shared in the group stays in the group. Ask about ground rules, and know that you decide how much to share and when.",
+        "Groups usually meet at the same time each week for several weeks. Use 'Book another visit' to schedule your sessions, then check 'Your visits' to see them all.",
+        "Group sessions often cost less than individual ones. Ask the provider about rates, or check sliding-scale options."
       ] }
   ];
 
-  const RESOURCE_CATS = ["All", "First Visit", "Anxiety", "Depression", "Insurance", "Mindfulness"];
+  const RESOURCE_CATS = ["All", "First Visit", "Anxiety", "Depression", "Insurance", "Mindfulness", "Couples", "Group"];
 
   const FAQS = [
     { id: "f1", q: "How do I book, reschedule, or cancel an appointment?",
@@ -220,7 +238,7 @@
     comm: { tab: "groups", list: "messages", active: "c:Cedar", requested: new Set() },
     res: { query: "", cat: "All", savedOnly: false, saved: new Set(saved.savedRes || ["r1"]), open: new Set() },
     sup: { openFaq: new Set(["f1"]), tickets: saved.tickets || [], liveChat: [
-      { who: "bot", text: "Hi! I'm MindConnect Support. Ask me about booking, insurance, peer privacy, or technical issues." }
+      { who: "bot", text: "Hi! I'm the MindConnect automated assistant. Ask me about booking, insurance, peer privacy, or technical issues." }
     ] },
     account: { ...DEFAULT_ACCOUNT, ...(saved.account || {}) },
     editingNoteId: null,
@@ -1590,19 +1608,55 @@
   /* =========================================================
      SUPPORT DIALOGS (Live Chat & Callback Modal)
      ========================================================= */
+  function chatBubbleHTML(m) {
+    const mine = m.who === "me";
+    const actions = (m.actions || []).map(a =>
+      `<button type="button" class="btn chat-action" data-chat-go="${esc(a.go)}">${esc(a.label)}</button>`).join("");
+    return `
+      <div class="bubble ${mine ? "me" : ""}">
+        <small>${mine ? "You" : "Automated assistant"}</small>${esc(m.text)}
+        ${actions ? `<div class="chat-actions">${actions}</div>` : ""}
+      </div>`;
+  }
+
+  function chatLog() {
+    const dlg = $("#confirm");
+    return dlg.open ? $("#modal-chat-log") : null;
+  }
+
+  function addChatMessage(m) {
+    state.sup.liveChat.push(m);
+    const log = chatLog();
+    if (!log) return;
+    log.insertAdjacentHTML("beforeend", chatBubbleHTML(m));
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function showTyping(on) {
+    const log = chatLog();
+    if (!log) return;
+    const existing = $("#chat-typing");
+    if (existing) existing.remove();
+    if (!on) return;
+    log.insertAdjacentHTML("beforeend", `
+      <div class="bubble typing" id="chat-typing">
+        <small>Automated assistant</small>
+        <span class="typing-dots" aria-hidden="true"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>
+        <span class="sr">Assistant is typing…</span>
+      </div>`);
+    log.scrollTop = log.scrollHeight;
+  }
+
   function openSupportChatModal() {
     const dlg = $("#confirm");
     dlg.innerHTML = `
       <h2 id="confirm-h">Live Support Chat</h2>
-      <p>Ask a question below and our support assistant will help right away.</p>
-      <div class="chat-log modal-chat-log" id="modal-chat-log" aria-live="polite">
-        ${state.sup.liveChat.map(m => `
-          <div class="bubble ${m.who === "me" ? "me" : ""}">
-            <small>${m.who === "me" ? "You" : "Support Agent"}</small>${esc(m.text)}
-          </div>
-        `).join("")}
+      <p>Ask a question below. This is an automated assistant, not a substitute for professional care.</p>
+      <div class="chat-log modal-chat-log" id="modal-chat-log" role="log" aria-live="polite" aria-label="Chat messages" tabindex="0">
+        ${state.sup.liveChat.map(chatBubbleHTML).join("")}
       </div>
       <form class="chat-form" id="modal-chat-form" style="margin-top:10px">
+        <label class="sr" for="modal-chat-input">Type your question</label>
         <input id="modal-chat-input" placeholder="Type your question..." autocomplete="off" required>
         <button class="btn primary" type="submit">Send</button>
       </form>
@@ -1642,18 +1696,39 @@
     if (!dlg.open) dlg.showModal();
   }
 
+  const CRISIS_RE = /suicid|kill myself|killing myself|end my life|want to die|don'?t want to (be here|live)|self[- ]?harm|hurt myself|harm myself|overdose|in danger|emergency/;
+
   function supportBotReply(text) {
     const t = text.toLowerCase();
+    if (CRISIS_RE.test(t)) {
+      return {
+        urgent: true,
+        actions: [],
+        text: "I'm an automated assistant, so I can't give crisis support, but you deserve help right now. If you're in immediate danger, call 911. You can also call or text 988 (Suicide & Crisis Lifeline) or text HOME to 741741 (Crisis Text Line). Both are free and open 24/7."
+      };
+    }
     if (/insur|aetna|cigna|kaiser|blue|self-pay|cost|price/.test(t)) {
-      return "You can filter providers by insurance on the Find care screen, or update your Member ID & default insurance in the Account tab.";
+      return {
+        text: "You can filter providers by insurance on the Find care screen, or update your Member ID & default insurance in the Account tab.",
+        actions: [{ label: "Update insurance", go: "insurance" }, { label: "Open Account", go: "account" }]
+      };
     }
     if (/cancel|resched|visit|book|appoint|history|past/.test(t)) {
-      return "You can view upcoming visits or log/review previous visits in the Account tab.";
+      return {
+        text: "You can view upcoming visits or log/review previous visits in the Account tab.",
+        actions: [{ label: "Open Account", go: "account" }, { label: "Go to Find care", go: "find" }]
+      };
     }
     if (/peer|group|anon|alias/.test(t)) {
-      return `Peer groups use your alias (${state.account.alias}). You can change your alias anytime in the Account tab.`;
+      return {
+        text: `Peer groups use your alias (${state.account.alias}). You can change your alias anytime in the Account tab.`,
+        actions: [{ label: "Open peer groups", go: "community" }, { label: "Open Account", go: "account" }]
+      };
     }
-    return "Thanks for reaching out! I can help with provider filters, insurance, visit history, or you can submit a ticket in the Support tab.";
+    return {
+      text: "Thanks for reaching out! I can help with provider filters, insurance, visit history, or you can submit a ticket in the Support tab.",
+      actions: [{ label: "Go to Find care", go: "find" }, { label: "Open Account", go: "account" }]
+    };
   }
 
   /* =========================================================
@@ -1665,6 +1740,21 @@
       if (stub) { e.preventDefault(); toast(`${stub.dataset.stub} isn't part of this prototype yet.`); return; }
       const t = e.target.closest("[data-toast]");
       if (t) return toast(t.dataset.toast);
+      const chatGo = e.target.closest("[data-chat-go]");
+      if (chatGo) {
+        const view = chatGo.dataset.chatGo;
+        $("#confirm").close();
+        if (view === "insurance") {
+          go("find");
+          setTimeout(() => {
+            $("#insurance-panel").scrollIntoView({ behavior: "smooth", block: "center" });
+            $("#ins-input").focus({ preventScroll: true });
+          }, 100);
+        } else {
+          go(view);
+        }
+        return;
+      }
       const g = e.target.closest("[data-go]");
       if (g && !g.closest("#view-book")) go(g.dataset.go);
 
@@ -1694,8 +1784,14 @@
         const inp = $("#modal-chat-input");
         const text = inp.value.trim();
         if (!text) return;
-        state.sup.liveChat.push({ who: "me", text }, { who: "bot", text: supportBotReply(text) });
-        openSupportChatModal();
+        inp.value = "";
+        addChatMessage({ who: "me", text });
+        const reply = supportBotReply(text);
+        showTyping(true);
+        setTimeout(() => {
+          showTyping(false);
+          addChatMessage({ who: "bot", ...reply });
+        }, reply.urgent ? 0 : 900);
       }
       if (e.target.id === "modal-call-form") {
         e.preventDefault();
